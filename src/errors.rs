@@ -53,7 +53,7 @@ impl BotDetectorError {
     /// # Example
     ///
     /// ```rust
-    /// # use my_bot_checker::errors::BotDetectorError;
+    /// # use botagent::errors::BotDetectorError;
     /// let error = BotDetectorError::Io(std::io::Error::new(std::io::ErrorKind::Other, "on error"));
     /// assert_eq!(error.error_message(), "IO error: on error");
     /// ```
