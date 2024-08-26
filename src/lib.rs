@@ -270,6 +270,44 @@ pub fn create_is_bot(custom_pattern: Regex) -> impl Fn(&str) -> bool {
     }
 }
 
+/// Creates a function to check if a user agent matches any bot pattern from a list.
+///
+/// # Arguments
+///
+/// * `list` - A vector of strings where each string represents a bot pattern. The patterns will be joined with `|` to form a single regular expression.
+///
+/// # Returns
+///
+/// Returns a closure that takes a user agent string and returns `true` if it matches any of the patterns from the list, otherwise `false`.
+///
+/// # Panics
+///
+/// Panics if there is an issue compiling the regular expression from the list of patterns.
+///
+/// # Example
+///
+/// ```no_run
+/// # use pcre2::bytes::Regex;
+/// # use botagent::create_is_bot_from_list;
+/// let patterns = vec![
+///     "Googlebot".to_string(),
+///     "Bingbot".to_string(),
+///     "Slurp".to_string(),
+/// ];
+/// let is_bot = create_is_bot_from_list(&patterns);
+/// assert!(is_bot("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"));
+/// assert!(!is_bot("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"));
+/// ```
+pub fn create_is_bot_from_list(list: &[String]) -> impl Fn(&str) -> bool {
+    let pattern_str = list.join("|");
+
+    let regex = Regex::new(&pattern_str).expect("Failed to compile regex");
+
+    move |user_agent: &str| -> bool {
+        !user_agent.is_empty() && regex.is_match(user_agent.as_bytes()).unwrap_or(false)
+    }
+}
+
 #[cfg(test)]
 mod features {
     use super::*;
@@ -388,6 +426,37 @@ mod features {
 
         // create custom_is_bot function with custom pattern
         assert!(custom_is_bot(bot_user_agent));
+    }
+
+    #[test]
+    fn test_create_is_bot_from_list() {
+        let chrome_lighthouse_user_agent_strings = [
+            "mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/537.36 (khtml, like gecko) chrome/94.0.4590.2 safari/537.36 chrome-lighthouse",
+            "mozilla/5.0 (linux; android 7.0; moto g (4)) applewebkit/537.36 (khtml, like gecko) chrome/94.0.4590.2 mobile safari/537.36 chrome-lighthouse",
+        ];
+
+        let temp_file = create_temp_patterns_file(&["chrome-lighthouse", "google", "bot", "http"]);
+
+        let patterns_to_remove: Vec<String> = chrome_lighthouse_user_agent_strings
+            .iter()
+            .flat_map(|ua| is_bot_matches(ua, temp_file.path().to_str().unwrap()).unwrap())
+            .collect();
+
+        let filtered_list: Vec<String> = vec!["chrome-lighthouse", "google", "bot", "http"]
+            .into_iter()
+            .map(|s| s.to_string()) // Convert &str to String
+            .filter(|pattern| !patterns_to_remove.contains(pattern))
+            .collect();
+
+        let is_bot2 = create_is_bot_from_list(&filtered_list);
+        let ua = chrome_lighthouse_user_agent_strings[0];
+
+        // create custom isbot function with custom pattern
+        assert!(!is_bot_matches(ua, temp_file.path().to_str().unwrap())
+            .unwrap()
+            .is_empty());
+
+        assert!(!is_bot2(ua));
     }
 
     #[test]
