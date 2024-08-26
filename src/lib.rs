@@ -293,6 +293,7 @@ mod features {
 
         // bot_user_agent string is recognised as bot
         assert!(is_bot(bot_user_agent, temp_file.path().to_str().unwrap()).unwrap());
+        assert!(!is_bot("", temp_file.path().to_str().unwrap()).unwrap());
     }
 
     #[test]
@@ -305,6 +306,10 @@ mod features {
         assert_eq!(
             is_bot_match(bot_user_agent, temp_file.path().to_str().unwrap()).unwrap(),
             Some("Googlebot".to_string())
+        );
+        assert_eq!(
+            is_bot_match("", temp_file.path().to_str().unwrap()).unwrap(),
+            None
         );
     }
 
@@ -319,6 +324,11 @@ mod features {
         // find all patterns in bot_user_agent string
         assert!(matches.contains(&"Google".to_string()));
         assert_eq!(matches.len(), 4);
+
+        let empty_user_agent = "";
+        let matches = is_bot_matches(empty_user_agent, temp_file.path().to_str().unwrap()).unwrap();
+
+        assert!(matches.is_empty());
     }
 
     #[test]
@@ -332,7 +342,12 @@ mod features {
         let result = is_bot_pattern(bot_user_agent, temp_file.path().to_str().unwrap())
             .expect("Failed to execute is_bot_pattern");
 
+        // find first pattern in bot user agent string
         assert_eq!(result, Some(expected_pattern.to_string()));
+        assert_eq!(
+            is_bot_pattern("", temp_file.path().to_str().unwrap()).unwrap(),
+            None
+        );
     }
 
     #[test]
@@ -350,11 +365,18 @@ mod features {
         let result = is_bot_patterns(bot_user_agent, temp_file.path().to_str().unwrap())
             .expect("Failed to execute is_bot_patterns");
 
+        // find all patterns in bot user agent string
         for pattern in patterns.iter() {
             assert!(result.contains(&pattern.to_string()));
         }
 
         assert_eq!(result.len(), 4);
+
+        let empty_user_agent = "";
+        let matches =
+            is_bot_patterns(empty_user_agent, temp_file.path().to_str().unwrap()).unwrap();
+
+        assert!(matches.is_empty());
     }
 
     #[test]
