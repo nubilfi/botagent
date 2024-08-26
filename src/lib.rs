@@ -201,6 +201,49 @@ pub fn is_bot_pattern(
     Ok(None)
 }
 
+/// Check which bot patterns from the given JSON file match the user agent.
+///
+/// # Arguments
+///
+/// * `user_agent` - The user agent string to be checked.
+/// * `json_path` - Path to the JSON file containing bot patterns.
+///
+/// # Returns
+///
+/// Returns a `Vec<String>` containing all bot patterns from the JSON file that match the user agent.
+/// If no patterns match, an empty vector is returned.
+///
+/// # Errors
+///
+/// Returns a `BotDetectorError` if there's an issue with reading the patterns, parsing the JSON, or compiling any regex.
+///
+/// # Example
+///
+/// ```no_run
+/// # use botagent::is_bot_patterns;
+/// let matching_patterns = is_bot_patterns("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "patterns.json").unwrap();
+/// assert!(matching_patterns.contains(&"Googlebot/2.1".to_string()));
+/// ```
+pub fn is_bot_patterns(user_agent: &str, json_path: &str) -> Result<Vec<String>, BotDetectorError> {
+    let patterns_json = fs::read_to_string(json_path)?;
+    let patterns: List = serde_json::from_str(&patterns_json)?;
+
+    let matching_patterns: Vec<String> = patterns
+        .0
+        .into_iter()
+        .filter_map(|pattern| {
+            let regex = Regex::new(&pattern).ok()?;
+            if regex.is_match(user_agent.as_bytes()).ok()? {
+                Some(pattern)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok(matching_patterns)
+}
+
 /// Creates a closure that checks if a user agent string matches a custom regex pattern
 ///
 /// # Arguments
@@ -290,6 +333,28 @@ mod features {
             .expect("Failed to execute is_bot_pattern");
 
         assert_eq!(result, Some(expected_pattern.to_string()));
+    }
+
+    #[test]
+    fn test_is_bot_patterns() {
+        let bot_user_agent =
+            "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+        let patterns = [
+            r"(?<! (?:channel/|google/))google(?!(app|/google| pixel))",
+            r"(?<! cu)bots?(?:\b|_)",
+            r"(?<!(?:lib))http",
+            r"\.com",
+        ];
+
+        let temp_file = create_temp_patterns_file(&patterns);
+        let result = is_bot_patterns(bot_user_agent, temp_file.path().to_str().unwrap())
+            .expect("Failed to execute is_bot_patterns");
+
+        for pattern in patterns.iter() {
+            assert!(result.contains(&pattern.to_string()));
+        }
+
+        assert_eq!(result.len(), 4);
     }
 
     #[test]
