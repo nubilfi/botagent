@@ -13,12 +13,27 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install deps
+
+    - name: Set up Rust
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: 1.80.1
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Install dependencies
       run: rustup update
 
     - name: Clippy
@@ -36,7 +51,7 @@ jobs:
         cargo +nightly udeps
 
     - name: Run tests
-      run: cargo test
+      run: cargo test --verbose
 
     - name: Generate code coverage
       run: |
@@ -48,9 +63,9 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
       with:
         name: code-coverage-report
         path: cobertura.xml
+
