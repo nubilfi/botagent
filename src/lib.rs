@@ -377,11 +377,10 @@ mod features {
 
         let temp_file = create_temp_patterns_file(&[expected_pattern]);
 
-        let result = is_bot_pattern(bot_user_agent, temp_file.path().to_str().unwrap())
-            .expect("Failed to execute is_bot_pattern");
+        let result = is_bot_pattern(bot_user_agent, temp_file.path().to_str().unwrap()).unwrap();
 
         // find first pattern in bot user agent string
-        assert_eq!(result.unwrap(), expected_pattern.to_string());
+        assert_eq!(result, Some(expected_pattern.to_string()));
 
         assert_eq!(
             is_bot_pattern("", temp_file.path().to_str().unwrap()).unwrap(),
@@ -401,11 +400,13 @@ mod features {
         ];
 
         let temp_file = create_temp_patterns_file(&patterns);
-        let result = is_bot_patterns(bot_user_agent, temp_file.path().to_str().unwrap())
-            .expect("Failed to execute is_bot_patterns");
+        let result = is_bot_patterns(bot_user_agent, temp_file.path().to_str().unwrap()).unwrap();
 
         // find all patterns in bot user agent string
-        assert!(result.contains(&patterns[0].to_string()));
+        for pattern in patterns.iter() {
+            assert!(result.contains(&pattern.to_string()));
+        }
+
         assert_eq!(result.len(), 4);
 
         let empty_user_agent = "";
