@@ -1,0 +1,56 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - '**/README.md'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install deps
+      run: rustup update
+
+    - name: Clippy
+      run: cargo clippy -- -W clippy::pedantic
+
+    - name: Outdated
+      run: |
+        cargo install cargo-outdated && \
+        cargo outdated -d2
+
+    - name: Unused Deps
+      run: |
+        rustup update nightly && \
+        cargo +nightly install cargo-udeps && \
+        cargo +nightly udeps
+
+    - name: Run tests
+      run: cargo test
+
+    - name: Generate code coverage
+      run: |
+        cargo install cargo-tarpaulin --version 0.27.2 && \
+        cargo tarpaulin --all-features --workspace --out Xml --avoid-cfg-tarpaulin
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage-report
+        path: cobertura.xml
