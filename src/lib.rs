@@ -373,11 +373,12 @@ mod features {
     fn test_is_bot_pattern() {
         let bot_user_agent =
             "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
-        let expected_pattern = r"(?<! (?:channel/|google/))google(?!(app|/google| pixel))";
+        let expected_pattern = r"(?<!\b(?:channel/|google/))google(?!(app|/google| pixel))";
 
         let temp_file = create_temp_patterns_file(&[expected_pattern]);
 
-        let result = is_bot_pattern(bot_user_agent, temp_file.path().to_str().unwrap()).unwrap();
+        let result = is_bot_pattern(bot_user_agent, temp_file.path().to_str().unwrap())
+            .expect("Failed to execute is_bot_pattern");
 
         // find first pattern in bot user agent string
         assert_eq!(result, Some(expected_pattern.to_string()));
@@ -393,7 +394,7 @@ mod features {
         let bot_user_agent =
             "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
         let patterns = [
-            r"(?<! (?:channel/|google/))google(?!(app|/google| pixel))",
+            r"(?<!\b(?:channel/|google/))google(?!(app|/google| pixel))",
             r"(?<! cu)bots?(?:\b|_)",
             r"(?<!(?:lib))http",
             r"\.com",
